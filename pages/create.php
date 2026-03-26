@@ -36,6 +36,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body class="teacher-dashboard">
+    <div class="bg-blob blob-1"></div>
+    <div class="bg-blob blob-2"></div>
     <header class="nav-bar">
         <h2><i class="fas fa-plus-circle"></i> Create New Assessment</h2>
         <a href="dashboard.php" class="btn btn-secondary" style="width: auto; padding: 10px 24px;">Discard</a>

@@ -73,7 +73,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $evaluations[] = [
             'question' => $q['question_text'],
             'status' => $is_correct ? 'Correct' : 'Incorrect',
-            'points' => $is_correct ? $points : 0
+            'points' => $is_correct ? $points : 0,
+            'explanation' => $q['explanation'],
+            'correct_answer' => $q['correct_answer'] ?? '' // For MCQ we might want text, but let's stick to this for now
         ];
     }
 
@@ -118,6 +120,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </style>
 </head>
 <body class="student-dashboard">
+    <div class="bg-blob blob-1"></div>
+    <div class="bg-blob blob-2"></div>
     <div class="timer-bar">
         <div class="content-wrapper" style="padding: 0 20px; display: flex; justify-content: space-between; align-items: center;">
             <h3 style="margin: 0; color: var(--primary);"><?= htmlspecialchars($quiz['title']) ?></h3>
@@ -127,6 +131,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 
     <div class="container-quiz">
+        <div style="text-align: center; margin-bottom: 2rem;">
+            <img src="https://cdn-icons-png.flaticon.com/512/3242/3242257.png" style="width: 100px; height: 100px; opacity: 0.9;" alt="Quiz Header">
+        </div>
         <form id="quizForm" method="POST">
             <?php foreach ($questions as $index => $q): ?>
                 <div class="q-card <?= $index === 0 ? 'active' : '' ?>" id="q-<?= $index ?>">
@@ -140,15 +147,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             foreach ($opts as $opt): 
                             ?>
                                 <label>
-                                    <input type="radio" name="answers[<?= $q['id'] ?>]" value="<?= $opt['id'] ?>" required>
-                                    <div class="opt-box">
+                                    <input type="radio" name="answers[<?= $q['id'] ?>]" value="<?= $opt['id'] ?>" 
+                                           onchange="provideFeedback(<?= $index ?>, <?= $opt['is_correct'] ? 'true' : 'false' ?>, '<?= addslashes($q['explanation'] ?? '') ?>')" required>
+                                    <div class="opt-box" id="opt-<?= $opt['id'] ?>">
                                         <i class="far fa-circle"></i> <?= htmlspecialchars($opt['option_text']) ?>
                                     </div>
                                 </label>
                             <?php endforeach; ?>
                         <?php elseif ($q['question_type'] === 'short_answer'): ?>
-                            <input type="text" name="answers[<?= $q['id'] ?>]" class="short-answer-input" placeholder="Type your answer here..." required>
+                            <div style="display: flex; gap: 10px;">
+                                <input type="text" id="sa-<?= $q['id'] ?>" name="answers[<?= $q['id'] ?>]" class="short-answer-input" placeholder="Type your answer here..." required>
+                                <button type="button" class="btn" style="width: auto;" onclick="checkShortAnswer(<?= $index ?>, <?= $q['id'] ?>, '<?= addslashes($q['correct_answer']) ?>', '<?= addslashes($q['explanation'] ?? '') ?>')">Check</button>
+                            </div>
                         <?php endif; ?>
+                        
+                        <div id="feedback-<?= $index ?>" class="feedback-msg" style="display: none; margin-top: 20px; padding: 15px; border-radius: 12px; font-weight: 600;"></div>
                     </div>
 
                     <div style="display: flex; justify-content: space-between; margin-top: 2.5rem;">
@@ -159,9 +172,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <?php endif; ?>
 
                         <?php if ($index < count($questions) - 1): ?>
-                            <button type="button" class="btn" style="width: auto; padding: 12px 30px;" onclick="goTo(<?= $index + 1 ?>)">Next <i class="fas fa-chevron-right"></i></button>
+                            <button type="button" id="next-btn-<?= $index ?>" class="btn" style="width: auto; padding: 12px 30px;" onclick="goTo(<?= $index + 1 ?>)">Next <i class="fas fa-chevron-right"></i></button>
                         <?php else: ?>
-                            <button type="submit" class="btn" style="width: auto; padding: 12px 40px; background: linear-gradient(135deg, #10b981, #059669);">Submit Quiz <i class="fas fa-check-double"></i></button>
+                            <button type="submit" id="submit-btn" class="btn" style="width: auto; padding: 12px 40px; background: linear-gradient(135deg, #10b981, #059669);">Submit Quiz <i class="fas fa-check-double"></i></button>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -173,6 +186,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         let currentIdx = 0;
         const total = <?= count($questions) ?>;
         
+        function provideFeedback(idx, isCorrect, explanation) {
+            const feedbackEl = document.getElementById('feedback-' + idx);
+            feedbackEl.style.display = 'block';
+            feedbackEl.style.background = isCorrect ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)';
+            feedbackEl.style.color = isCorrect ? '#86efac' : '#fca5a5';
+            feedbackEl.innerHTML = `<i class="fas ${isCorrect ? 'fa-check-circle' : 'fa-times-circle'}"></i> ` + 
+                                   (isCorrect ? 'Correct! ' : 'Incorrect. ') + explanation;
+            
+            // Auto advance
+            setTimeout(() => {
+                if (idx < total - 1) {
+                    goTo(idx + 1);
+                }
+            }, 2500);
+        }
+
+        function checkShortAnswer(idx, qId, correct, explanation) {
+            const inputEl = document.getElementById('sa-' + qId);
+            const isCorrect = inputEl.value.trim().toLowerCase() === correct.toLowerCase();
+            provideFeedback(idx, isCorrect, explanation);
+        }
+
         function goTo(n) {
             document.getElementById('q-' + currentIdx).classList.remove('active');
             document.getElementById('q-' + n).classList.add('active');

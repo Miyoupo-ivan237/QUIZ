@@ -28,6 +28,8 @@ $status_color = $score_percent >= 60 ? 'var(--success)' : 'var(--error)';
     </style>
 </head>
 <body class="student-dashboard">
+    <div class="bg-blob blob-1"></div>
+    <div class="bg-blob blob-2"></div>
     <header class="nav-bar">
         <h2><i class="fas fa-poll"></i> Assessment Report</h2>
         <a href="dashboard.php" class="btn" style="width: auto; padding: 10px 24px;">Return Home</a>
@@ -43,18 +45,35 @@ $status_color = $score_percent >= 60 ? 'var(--success)' : 'var(--error)';
         <h3 style="margin-bottom: 1.5rem;">Detailed Evaluation</h3>
         <div class="glass-card" style="padding: 0; overflow: hidden; max-width: 100%;">
             <?php foreach ($result['evaluations'] as $eval): ?>
-                <div class="eval-item">
-                    <div style="flex: 1;">
-                        <div style="font-weight: 600;"><?= htmlspecialchars($eval['question']) ?></div>
-                        <div style="font-size: 0.8rem; color: var(--text-muted);">Points earned: <?= $eval['points'] ?></div>
+                <div class="eval-item" style="flex-direction: column; align-items: flex-start; gap: 10px;">
+                    <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+                        <div style="font-weight: 700; font-size: 1.1rem;"><?= htmlspecialchars($eval['question']) ?></div>
+                        <span class="eval-status status-<?= $eval['status'] ?>"><?= $eval['status'] ?></span>
                     </div>
-                    <span class="eval-status status-<?= $eval['status'] ?>"><?= $eval['status'] ?></span>
+                    
+                    <div style="font-size: 0.9rem; color: var(--text-muted);">Points earned: <?= $eval['points'] ?></div>
+                    
+                    <?php if ($eval['status'] === 'Incorrect'): ?>
+                        <div style="background: rgba(255, 255, 255, 0.03); border-left: 4px solid var(--secondary); padding: 15px; border-radius: 0 12px 12px 0; width: 100%;">
+                            <p style="margin: 0; font-weight: 600; color: var(--secondary);"><i class="fas fa-lightbulb"></i> Correction:</p>
+                            <p style="margin: 5px 0;"><?= htmlspecialchars($eval['explanation']) ?></p>
+                        </div>
+                    <?php else: ?>
+                        <div style="background: rgba(16, 185, 129, 0.05); border-left: 4px solid var(--success); padding: 10px 15px; border-radius: 0 12px 12px 0; width: 100%; font-size: 0.85rem;">
+                            <i class="fas fa-check-circle"></i> <?= htmlspecialchars($eval['explanation']) ?>
+                        </div>
+                    <?php endif; ?>
                 </div>
             <?php endforeach; ?>
         </div>
 
-        <div style="text-align: center; margin-top: 3rem;">
+        <div style="text-align: center; margin-top: 3rem; display: flex; justify-content: center; gap: 20px;">
             <button onclick="window.print()" class="btn btn-secondary" style="width: auto; padding: 14px 40px;"><i class="fas fa-print"></i> Print Scorecard</button>
+            <?php if ($score_percent >= 60): ?>
+                <a href="dashboard.php" class="btn" style="width: auto; padding: 14px 40px; background: linear-gradient(135deg, #fbbf24, #d97706);">
+                    <i class="fas fa-unlock"></i> Unlock Next Challenge
+                </a>
+            <?php endif; ?>
         </div>
     </main>
 </body>

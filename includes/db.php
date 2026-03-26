@@ -11,10 +11,16 @@ try {
     $pdo->exec("CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT UNIQUE NOT NULL,
+        email TEXT,
         password TEXT NOT NULL,
-        role TEXT DEFAULT 'student', -- 'student', 'teacher' or 'admin'
+        role TEXT DEFAULT 'student',
+        security_pin TEXT DEFAULT '0000',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )");
+
+    // Attempt to add columns to existing DB gracefully
+    try { $pdo->exec("ALTER TABLE users ADD COLUMN security_pin TEXT DEFAULT '0000'"); } catch(PDOException $e) {}
+    try { $pdo->exec("ALTER TABLE users ADD COLUMN email TEXT"); } catch(PDOException $e) {}
 
     // Quizzes Table
     $pdo->exec("CREATE TABLE IF NOT EXISTS quizzes (

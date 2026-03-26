@@ -48,6 +48,8 @@ $performance = $stmt->fetchAll();
     </style>
 </head>
 <body class="student-dashboard">
+    <div class="bg-blob blob-1"></div>
+    <div class="bg-blob blob-2"></div>
     <header class="nav-bar">
         <h2><i class="fas fa-history"></i> Learning History</h2>
         <a href="dashboard.php" class="btn" style="width: auto; padding: 10px 24px;">Back to Dashboard</a>

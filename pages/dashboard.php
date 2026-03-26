@@ -20,6 +20,17 @@ if ($role === 'admin') {
     $attempt_count = $pdo->query("SELECT COUNT(*) FROM attempts")->fetchColumn();
     
     $all_users = $pdo->query("SELECT * FROM users ORDER BY created_at DESC LIMIT 10")->fetchAll();
+
+    // Handle User Deletion
+    if (isset($_POST['delete_user']) && isset($_POST['target_user_id'])) {
+        $target_id = intval($_POST['target_user_id']);
+        if ($target_id !== $user_id) { // Don't delete self
+            $stmt = $pdo->prepare("DELETE FROM users WHERE id = ?");
+            $stmt->execute([$target_id]);
+            header("Location: dashboard.php?msg=UserDeleted");
+            exit();
+        }
+    }
 }
 
 // Fetch Quizzes depending on role and branch
@@ -43,10 +54,16 @@ $quizzes = $stmt->fetchAll();
 
 // Student Stats
 $student_stats = [];
+$missed_count = 0;
 if ($role === 'student') {
     $stmt = $pdo->prepare("SELECT COUNT(*) as total, AVG(score*100.0/total_points) as avg_score FROM attempts WHERE user_id = ?");
     $stmt->execute([$user_id]);
     $student_stats = $stmt->fetch();
+    
+    // Check for ignored/unattempted quizzes
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM quizzes q WHERE NOT EXISTS (SELECT 1 FROM attempts a WHERE a.quiz_id = q.id AND a.user_id = ?)");
+    $stmt->execute([$user_id]);
+    $missed_count = $stmt->fetchColumn();
 }
 
 // Leaderboard
@@ -65,17 +82,19 @@ $leaderboard = $pdo->query("SELECT u.username, SUM(a.score) as total_score
     <title>Dashboard | QuizMaster</title>
     <link rel="stylesheet" href="../assets/css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .badge { display: inline-block; padding: 4px 10px; border-radius: 8px; font-size: 0.75rem; background: var(--primary-glow); color: #fff; margin-bottom: 5px; }
+    </style>
 </head>
 <body class="<?= $role ?>-dashboard">
+    <div class="bg-blob blob-1"></div>
+    <div class="bg-blob blob-2"></div>
     <header class="nav-bar">
         <h2 style="color: var(--primary); margin: 0; display: flex; align-items: center; gap: 10px;">
             <i class="fas fa-brain"></i> QuizMaster <small style="font-size: 0.6rem; background: var(--primary-glow); padding: 2px 8px; border-radius: 10px;"><?= strtoupper($role) ?></small>
         </h2>
         
         <div style="display: flex; gap: 1.5rem; align-items: center;">
-            <button onclick="toggleDarkMode()" class="btn" style="width: 40px; height: 40px; border-radius: 50%; padding: 0;">
-                <i class="fas fa-moon"></i>
-            </button>
             <span style="color: var(--text-main); font-size: 0.9rem;">
                 <i class="fas fa-user-circle"></i> <?= htmlspecialchars($username) ?>
             </span>
@@ -89,6 +108,25 @@ $leaderboard = $pdo->query("SELECT u.username, SUM(a.score) as total_score
         <div style="margin-bottom: 2rem;">
             <h1>Welcome, <?= htmlspecialchars($username) ?>!</h1>
             <p style="color: var(--text-muted);">Manage your quizzes and track your performance.</p>
+
+            <?php if (isset($_GET['msg'])): ?>
+                <div class="badge" style="background: var(--success); padding: 10px 20px; margin-top: 20px; display: inline-block;">
+                    <i class="fas fa-check-circle"></i> <?= htmlspecialchars($_GET['msg']) ?>
+                </div>
+            <?php endif; ?>
+
+            <?php if ($role === 'student' && $missed_count > 0): ?>
+                <div style="background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #fca5a5; padding: 15px 20px; border-radius: 16px; margin-top: 20px; display: flex; align-items: center; gap: 15px; animation: fadeIn 0.5s ease-out;">
+                    <i class="fas fa-bell" style="font-size: 1.5rem; color: #ef4444; animation: shake 2s infinite;"></i>
+                    <div style="font-size: 0.95rem;">
+                        <strong style="display: block; color: #fff; margin-bottom: 3px;">Study Reminder</strong>
+                        You have <b style="color: #ef4444;"><?= $missed_count ?></b> quiz(zes) waiting for you. Don't fall behind!
+                    </div>
+                </div>
+                <style>
+                    @keyframes shake { 0%, 100% {transform: rotate(0deg);} 25% {transform: rotate(-15deg);} 75% {transform: rotate(15deg);} }
+                </style>
+            <?php endif; ?>
         </div>
 
         <?php if ($role === 'admin'): ?>
@@ -130,7 +168,10 @@ $leaderboard = $pdo->query("SELECT u.username, SUM(a.score) as total_score
                                     <td><span class="badge" style="background: var(--primary-glow);"><?= strtoupper($u['role']) ?></span></td>
                                     <td style="color: var(--text-muted); font-size: 0.8rem;"><?= $u['created_at'] ?></td>
                                     <td>
-                                        <button class="btn btn-secondary" style="width: auto; padding: 5px 12px; font-size: 0.7rem;" onclick="alert('Demo: User deletion restricted.')">Delete</button>
+                                        <form method="POST" onsubmit="return confirm('Are you sure you want to delete this user? This cannot be undone.');" style="display:inline;">
+                                            <input type="hidden" name="target_user_id" value="<?= $u['id'] ?>">
+                                            <button type="submit" name="delete_user" class="btn btn-secondary" style="width: auto; padding: 5px 12px; font-size: 0.7rem; background: #ef4444; border: none; color: white;">Delete</button>
+                                        </form>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -140,7 +181,37 @@ $leaderboard = $pdo->query("SELECT u.username, SUM(a.score) as total_score
             </div>
         <?php endif; ?>
 
+        <?php if ($role === 'teacher'): ?>
+            <!-- Teacher Quick Stats -->
+            <div class="stat-row">
+                <?php
+                $stmt = $pdo->prepare("SELECT COUNT(*) FROM quizzes WHERE author_id = ?");
+                $stmt->execute([$user_id]);
+                $my_quizzes = $stmt->fetchColumn();
+
+                $stmt = $pdo->prepare("SELECT COUNT(DISTINCT user_id) FROM attempts a JOIN quizzes q ON a.quiz_id = q.id WHERE q.author_id = ?");
+                $stmt->execute([$user_id]);
+                $my_students = $stmt->fetchColumn();
+                ?>
+                <div class="stat-card">
+                    <span style="color:var(--text-muted);">Your Quizzes</span>
+                    <div class="stat-val"><?= $my_quizzes ?></div>
+                </div>
+                <div class="stat-card">
+                    <span style="color:var(--text-muted);">Total Participants</span>
+                    <div class="stat-val"><?= $my_students ?></div>
+                </div>
+                <div class="stat-card">
+                    <span style="color:var(--text-muted);">Student Performance</span>
+                    <div style="margin-top: 10px;">
+                        <a href="analytics.php" class="btn" style="width: auto; padding: 10px 20px; font-size: 0.8rem;">View Detailed Analytics</a>
+                    </div>
+                </div>
+            </div>
+        <?php endif; ?>
+
         <?php if ($role === 'student'): ?>
+
             <div class="stat-row">
                 <div class="stat-card">
                     <span style="color:var(--text-muted);">Quizzes Completed</span>
@@ -190,15 +261,26 @@ $leaderboard = $pdo->query("SELECT u.username, SUM(a.score) as total_score
                     <p>No quizzes available in this category.</p>
                 </div>
             <?php else: ?>
-                <?php foreach ($quizzes as $quiz): ?>
-                    <div class="quiz-card" onclick="location.href='<?= ($role === 'student') ? "quiz.php?id=".$quiz['id'] : "editor.php?id=".$quiz['id'] ?>'">
-                        <div class="badge"><?= htmlspecialchars($quiz['branch']) ?></div>
-                        <h4><?= htmlspecialchars($quiz['title']) ?></h4>
-                        <p style="font-size: 0.8rem; color: var(--text-muted);"><?= htmlspecialchars($quiz['course']) ?></p>
-                        <p style="margin: 1rem 0; font-size: 0.9rem;"><?= htmlspecialchars(substr($quiz['description'], 0, 80)) ?>...</p>
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span style="font-size: 0.75rem;"><i class="fas fa-clock"></i> <?= $quiz['time_limit'] ?>m</span>
-                            <span style="font-size: 0.75rem;"><i class="fas fa-graduation-cap"></i> <?= htmlspecialchars($quiz['teacher_name'] ?? 'System') ?></span>
+                <?php foreach ($quizzes as $quiz): 
+                    $thumb = "https://cdn-icons-png.flaticon.com/512/201/201614.png"; // Default
+                    if ($quiz['branch'] == 'Software Engineering') $thumb = "https://cdn-icons-png.flaticon.com/512/3242/3242257.png";
+                    if ($quiz['branch'] == 'Cyber Security') $thumb = "https://cdn-icons-png.flaticon.com/512/2716/2716612.png";
+                    if ($quiz['branch'] == 'Artificial Intelligence') $thumb = "https://cdn-icons-png.flaticon.com/512/2103/2103801.png";
+                    if ($quiz['branch'] == 'Networking') $thumb = "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
+                ?>
+                    <div class="quiz-card" onclick="location.href='<?= ($role === 'student') ? "quiz.php?id=".$quiz['id'] : "editor.php?id=".$quiz['id'] ?>'" style="padding-top: 0; overflow: hidden;">
+                        <div style="width: 100%; height: 120px; background: rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center; margin-bottom: 20px;">
+                            <img src="<?= $thumb ?>" style="width: 70px; height: 70px; opacity: 0.8;" alt="<?= $quiz['branch'] ?>">
+                        </div>
+                        <div style="padding: 0 20px 20px 20px;">
+                            <div class="badge"><?= htmlspecialchars($quiz['branch']) ?></div>
+                            <h4><?= htmlspecialchars($quiz['title']) ?></h4>
+                            <p style="font-size: 0.8rem; color: var(--text-muted);"><?= htmlspecialchars($quiz['course']) ?></p>
+                            <p style="margin: 0.8rem 0; font-size: 0.9rem;"><?= htmlspecialchars(substr($quiz['description'], 0, 70)) ?>...</p>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-size: 0.75rem;"><i class="fas fa-clock"></i> <?= $quiz['time_limit'] ?>m</span>
+                                <span style="font-size: 0.75rem;"><i class="fas fa-graduation-cap"></i> <?= htmlspecialchars($quiz['teacher_name'] ?? 'System') ?></span>
+                            </div>
                         </div>
                     </div>
                 <?php endforeach; ?>
@@ -207,17 +289,7 @@ $leaderboard = $pdo->query("SELECT u.username, SUM(a.score) as total_score
     </main>
 
     <script>
-        function toggleDarkMode() {
-            const body = document.body;
-            const currentTheme = body.getAttribute('data-theme');
-            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-            body.setAttribute('data-theme', newTheme);
-            localStorage.setItem('theme', newTheme);
-        }
-
-        // Initialize theme
-        const savedTheme = localStorage.getItem('theme') || 'dark';
-        document.body.setAttribute('data-theme', savedTheme);
+        // Additional UI logic if required
     </script>
 </body>
 </html>

@@ -70,6 +70,8 @@ $questions = $stmt->fetchAll();
     </style>
 </head>
 <body class="teacher-dashboard">
+    <div class="bg-blob blob-1"></div>
+    <div class="bg-blob blob-2"></div>
     <header class="nav-bar">
         <h2><i class="fas fa-magic"></i> <?= htmlspecialchars($quiz['title']) ?></h2>
         <a href="dashboard.php" class="btn" style="width: auto; padding: 10px 24px;">Publish & Finish</a>

@@ -46,6 +46,8 @@ $recent_attempts = $stmt->fetchAll();
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
+    <div class="bg-blob blob-1"></div>
+    <div class="bg-blob blob-2"></div>
     <header class="nav-bar">
         <h2><i class="fas fa-chart-pie"></i> Quiz Analytics</h2>
         <a href="dashboard.php" class="btn" style="width: auto; padding: 10px 24px; font-size: 0.8rem;">Back to Dashboard</a>
