@@ -89,7 +89,11 @@ $recent_attempts = $stmt->fetchAll();
                             $pct = round(($att['score'] / $att['total_points']) * 100);
                         ?>
                             <tr>
-                                <td style="padding: 20px;"><strong><?= htmlspecialchars($att['username']) ?></strong></td>
+                                <td style="padding: 20px;">
+                                    <a href="history.php?user_id=<?= $att['user_id'] ?>" style="color: inherit; text-decoration: none;">
+                                        <strong><i class="fas fa-external-link-alt" style="font-size: 0.7rem; color: var(--primary);"></i> <?= htmlspecialchars($att['username']) ?></strong>
+                                    </a>
+                                </td>
                                 <td style="color: var(--text-muted);"><?= htmlspecialchars($att['title']) ?></td>
                                 <td>
                                     <span style="font-weight: 700; color: <?= $pct >= 60 ? 'var(--success)' : 'var(--error)' ?>;">

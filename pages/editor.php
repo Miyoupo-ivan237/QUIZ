@@ -23,13 +23,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $type = $_POST['question_type'] ?? 'multiple_choice';
         $pts = intval($_POST['points'] ?? 10);
         $correct_answer = trim($_POST['correct_answer'] ?? '');
+        $explanation = trim($_POST['explanation'] ?? '');
         $options = $_POST['options'] ?? [];
         $correct_index = intval($_POST['correct_option'] ?? 0);
 
         if ($text) {
             $pdo->beginTransaction();
-            $stmt = $pdo->prepare("INSERT INTO questions (quiz_id, question_text, question_type, points, correct_answer) VALUES (?, ?, ?, ?, ?)");
-            $stmt->execute([$quiz_id, $text, $type, $pts, $correct_answer]);
+            $stmt = $pdo->prepare("INSERT INTO questions (quiz_id, question_text, question_type, points, correct_answer, explanation) VALUES (?, ?, ?, ?, ?, ?)");
+            $stmt->execute([$quiz_id, $text, $type, $pts, $correct_answer, $explanation]);
             $q_id = $pdo->lastInsertId();
 
             if ($type === 'multiple_choice' || $type === 'true_false') {
@@ -141,7 +142,7 @@ $questions = $stmt->fetchAll();
                         <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 10px;">Options (Select correct one)</label>
                         <div style="display: flex; flex-direction: column; gap: 10px;">
                             <?php for($k=0;$k<4;$k++): ?>
-                                <div style="display: flex; gap: 10px; align-items: center;">
+                                <div class="opt-row" id="opt-row-<?= $k ?>" style="display: flex; gap: 10px; align-items: center;">
                                     <input type="radio" name="correct_option" value="<?= $k ?>" <?= $k==0 ? 'checked':'' ?> style="width: auto;">
                                     <input type="text" name="options[]" placeholder="Option <?= chr(65+$k) ?>" <?= $k<2 ? 'required' : '' ?>>
                                 </div>
@@ -159,6 +160,11 @@ $questions = $stmt->fetchAll();
                     <div class="input-group">
                         <label>Points</label>
                         <input type="number" name="points" value="10" min="1">
+                    </div>
+
+                    <div class="input-group">
+                        <label>Explanation / Feedback</label>
+                        <textarea name="explanation" rows="2" placeholder="Why is this answer correct?"></textarea>
                     </div>
 
                     <button type="submit" class="btn">Add Question</button>
@@ -183,15 +189,13 @@ $questions = $stmt->fetchAll();
                 if (type === 'true_false') {
                     inputs[0].value = "True";
                     inputs[1].value = "False";
-                    inputs[2].style.display = "none";
-                    inputs[3].style.display = "none";
-                    radios[2].style.display = "none";
-                    radios[3].style.display = "none";
+                    document.getElementById('opt-row-2').style.display = "none";
+                    document.getElementById('opt-row-3').style.display = "none";
                 } else {
-                    inputs[2].style.display = "block";
-                    inputs[3].style.display = "block";
-                    radios[2].style.display = "block";
-                    radios[3].style.display = "block";
+                    document.getElementById('opt-row-2').style.display = "flex";
+                    document.getElementById('opt-row-3').style.display = "flex";
+                    if (inputs[0].value === "True") inputs[0].value = "";
+                    if (inputs[1].value === "False") inputs[1].value = "";
                 }
             } else {
                 opts.style.display = 'none';

@@ -148,7 +148,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             ?>
                                 <label>
                                     <input type="radio" name="answers[<?= $q['id'] ?>]" value="<?= $opt['id'] ?>" 
-                                           onchange="provideFeedback(<?= $index ?>, <?= $opt['is_correct'] ? 'true' : 'false' ?>, '<?= addslashes($q['explanation'] ?? '') ?>')" required>
+                                           onchange='provideFeedback(<?= $index ?>, <?= $opt['is_correct'] ? "true" : "false" ?>, <?= json_encode($q['explanation'] ?? "") ?>)' required>
                                     <div class="opt-box" id="opt-<?= $opt['id'] ?>">
                                         <i class="far fa-circle"></i> <?= htmlspecialchars($opt['option_text']) ?>
                                     </div>
@@ -157,7 +157,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <?php elseif ($q['question_type'] === 'short_answer'): ?>
                             <div style="display: flex; gap: 10px;">
                                 <input type="text" id="sa-<?= $q['id'] ?>" name="answers[<?= $q['id'] ?>]" class="short-answer-input" placeholder="Type your answer here..." required>
-                                <button type="button" class="btn" style="width: auto;" onclick="checkShortAnswer(<?= $index ?>, <?= $q['id'] ?>, '<?= addslashes($q['correct_answer']) ?>', '<?= addslashes($q['explanation'] ?? '') ?>')">Check</button>
+                                <button type="button" class="btn" style="width: auto;" onclick='checkShortAnswer(<?= $index ?>, <?= $q['id'] ?>, <?= json_encode($q['correct_answer'] ?? "") ?>, <?= json_encode($q['explanation'] ?? "") ?>)'>Check</button>
                             </div>
                         <?php endif; ?>
                         
@@ -192,14 +192,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             feedbackEl.style.background = isCorrect ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)';
             feedbackEl.style.color = isCorrect ? '#86efac' : '#fca5a5';
             feedbackEl.innerHTML = `<i class="fas ${isCorrect ? 'fa-check-circle' : 'fa-times-circle'}"></i> ` + 
-                                   (isCorrect ? 'Correct! ' : 'Incorrect. ') + explanation;
+                                   (isCorrect ? 'Correct! ' : 'Incorrect. ') + (explanation || '');
             
-            // Auto advance
-            setTimeout(() => {
-                if (idx < total - 1) {
-                    goTo(idx + 1);
-                }
-            }, 2500);
+            // Auto advance only if correct
+            if (isCorrect) {
+                setTimeout(() => {
+                    if (idx < total - 1) {
+                        goTo(idx + 1);
+                    }
+                }, 2000);
+            }
         }
 
         function checkShortAnswer(idx, qId, correct, explanation) {

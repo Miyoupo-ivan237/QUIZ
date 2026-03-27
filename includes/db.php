@@ -6,6 +6,9 @@ try {
     $pdo = new PDO("sqlite:$db_path");
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+    
+    // Enable Foreign Keys for SQLite
+    $pdo->exec("PRAGMA foreign_keys = ON;");
 
     // Users Table
     $pdo->exec("CREATE TABLE IF NOT EXISTS users (
@@ -83,7 +86,7 @@ try {
     $stmt->execute();
     if ($stmt->fetchColumn() == 0) {
         $admin_pwd = password_hash('admin123', PASSWORD_DEFAULT);
-        $stmt = $pdo->prepare("INSERT INTO users (username, password, role) VALUES ('admin', ?, 'teacher')");
+        $stmt = $pdo->prepare("INSERT INTO users (username, password, role) VALUES ('admin', ?, 'admin')");
         $stmt->execute([$admin_pwd]);
     }
 

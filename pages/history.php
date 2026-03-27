@@ -6,9 +6,31 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-$user_id = $_SESSION['user_id'];
-$username = $_SESSION['username'];
-$role = $_SESSION['role'];
+$me_id = $_SESSION['user_id'];
+$me_role = $_SESSION['role'];
+
+// Target User Logic
+$target_user_id = intval($_GET['user_id'] ?? $me_id);
+
+// Permission Check: Students can only view themselves
+if ($me_role === 'student' && $target_user_id !== $me_id) {
+    header("Location: history.php");
+    exit();
+}
+
+// Fetch target user info
+$stmt = $pdo->prepare("SELECT username, role FROM users WHERE id = ?");
+$stmt->execute([$target_user_id]);
+$target_user = $stmt->fetch();
+
+if (!$target_user) {
+    header("Location: dashboard.php");
+    exit();
+}
+
+$username = $target_user['username'];
+$role = $target_user['role'];
+$user_id = $target_user_id;
 
 // Fetch all attempts for this user
 $stmt = $pdo->prepare("SELECT a.*, q.title, q.branch, q.course 
@@ -51,8 +73,13 @@ $performance = $stmt->fetchAll();
     <div class="bg-blob blob-1"></div>
     <div class="bg-blob blob-2"></div>
     <header class="nav-bar">
-        <h2><i class="fas fa-history"></i> Learning History</h2>
-        <a href="dashboard.php" class="btn" style="width: auto; padding: 10px 24px;">Back to Dashboard</a>
+        <h2><i class="fas fa-history"></i> Performance: <?= htmlspecialchars($username) ?></h2>
+        <div style="display: flex; gap: 10px;">
+            <?php if ($me_role !== 'student'): ?>
+                <a href="<?= $me_role === 'admin' ? 'dashboard.php' : 'analytics.php' ?>" class="btn btn-secondary" style="width: auto; padding: 10px 24px;">Back</a>
+            <?php endif; ?>
+            <a href="dashboard.php" class="btn" style="width: auto; padding: 10px 24px;">Home</a>
+        </div>
     </header>
 
     <main class="content-wrapper">

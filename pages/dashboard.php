@@ -35,7 +35,7 @@ if ($role === 'admin') {
 
 // Fetch Quizzes depending on role and branch
 if ($role === 'teacher') {
-    $sql = "SELECT q.* FROM quizzes q WHERE q.author_id = ?";
+    $sql = "SELECT q.*, u.username as teacher_name FROM quizzes q JOIN users u ON q.author_id = u.id WHERE q.author_id = ?";
     $params = [$user_id];
 } elseif ($role === 'admin') {
     $sql = "SELECT q.*, u.username as teacher_name FROM quizzes q JOIN users u ON q.author_id = u.id";
@@ -66,8 +66,7 @@ if ($role === 'student') {
     $missed_count = $stmt->fetchColumn();
 }
 
-// Leaderboard
-$leaderboard = $pdo->query("SELECT u.username, SUM(a.score) as total_score 
+$leaderboard = $pdo->query("SELECT u.id, u.username, SUM(a.score) as total_score 
                             FROM attempts a 
                             JOIN users u ON a.user_id = u.id 
                             GROUP BY u.id 
@@ -168,6 +167,7 @@ $leaderboard = $pdo->query("SELECT u.username, SUM(a.score) as total_score
                                     <td><span class="badge" style="background: var(--primary-glow);"><?= strtoupper($u['role']) ?></span></td>
                                     <td style="color: var(--text-muted); font-size: 0.8rem;"><?= $u['created_at'] ?></td>
                                     <td>
+                                        <a href="history.php?user_id=<?= $u['id'] ?>" class="btn" style="width: auto; padding: 5px 12px; font-size: 0.7rem; background: var(--primary); text-decoration: none; display: inline-block;">View Performance</a>
                                         <form method="POST" onsubmit="return confirm('Are you sure you want to delete this user? This cannot be undone.');" style="display:inline;">
                                             <input type="hidden" name="target_user_id" value="<?= $u['id'] ?>">
                                             <button type="submit" name="delete_user" class="btn btn-secondary" style="width: auto; padding: 5px 12px; font-size: 0.7rem; background: #ef4444; border: none; color: white;">Delete</button>
@@ -227,7 +227,15 @@ $leaderboard = $pdo->query("SELECT u.username, SUM(a.score) as total_score
                     <div style="margin-top: 15px; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 12px; border: 1px solid var(--glass-border);">
                         <?php foreach($leaderboard as $index => $hero): ?>
                             <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 5px;">
-                                <span>#<?= $index+1 ?> <?= htmlspecialchars($hero['username']) ?></span>
+                                <span>#<?= $index+1 ?> 
+                                    <?php if ($role !== 'student'): ?>
+                                        <a href="history.php?user_id=<?= $hero['id'] ?>" style="color: inherit; text-decoration: none;">
+                                            <?= htmlspecialchars($hero['username']) ?> <i class="fas fa-external-link-alt" style="font-size: 0.6rem;"></i>
+                                        </a>
+                                    <?php else: ?>
+                                        <?= htmlspecialchars($hero['username']) ?>
+                                    <?php endif; ?>
+                                </span>
                                 <span style="font-weight: bold; color: var(--primary);"><?= $hero['total_score'] ?> pts</span>
                             </div>
                         <?php endforeach; ?>

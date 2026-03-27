@@ -559,7 +559,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     const decoBtnText = { login: 'Create Account', signup: 'Sign In', forgot: 'Sign In' };
     const decoBtnTarget = { login: 'signup', signup: 'login', forgot: 'login' };
 
-    let currentScreen = '<?= ($action === 'register') ? 'signup' : 'login' ?>';
+    let currentScreen = '<?= ($action === 'register' && $error) ? 'signup' : ($action === 'reset_pass' && $error ? 'forgot' : 'login') ?>';
 
     function showScreen(name) {
         // hide all
