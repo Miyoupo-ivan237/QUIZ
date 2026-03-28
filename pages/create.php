@@ -13,11 +13,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $branch = $_POST['branch'] ?? 'General';
     $course = trim($_POST['course'] ?? 'Computer Science');
     $time_limit = intval($_POST['time_limit'] ?? 0);
-    $total_questions = intval($_POST['total_questions'] ?? 10);
+    $total_questions = intval($_POST['total_questions'] ?? 20); // Default to 20 as requested
 
     if ($title && $total_questions > 0) {
-        $stmt = $pdo->prepare("INSERT INTO quizzes (title, description, branch, course, time_limit, total_questions, author_id) VALUES (?, ?, ?, ?, ?, ?, ?)");
-        $stmt->execute([$title, $description, $branch, $course, $time_limit, $total_questions, $_SESSION['user_id']]);
+        $level = intval($_POST['level'] ?? 1);
+        $stmt = $pdo->prepare("INSERT INTO quizzes (title, description, branch, course, time_limit, total_questions, author_id, level) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$title, $description, $branch, $course, $time_limit, $total_questions, $_SESSION['user_id'], $level]);
         $quiz_id = $pdo->lastInsertId();
         header("Location: editor.php?id=$quiz_id");
         exit();
@@ -83,8 +84,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <input type="number" name="time_limit" value="15" min="0">
                     </div>
                     <div class="input-group" style="flex: 1;">
-                        <label><i class="fas fa-list-ol"></i> Target Question Count</label>
-                        <input type="number" name="total_questions" value="10" min="1">
+                        <label><i class="fas fa-layer-group"></i> Level / Section</label>
+                        <input type="number" name="level" value="1" min="1">
+                    </div>
+                    <div class="input-group" style="flex: 1;">
+                        <label><i class="fas fa-list-ol"></i> Target Questions</label>
+                        <input type="number" name="total_questions" value="20" min="1">
                     </div>
                 </div>
 

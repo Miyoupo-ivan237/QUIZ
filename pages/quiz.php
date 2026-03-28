@@ -85,7 +85,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $attempt_id = $pdo->lastInsertId();
 
     $_SESSION['last_result'] = [
+        'quiz_id' => $quiz_id,
         'quiz_title' => $quiz['title'],
+        'branch' => $quiz['branch'],
+        'level' => $quiz['level'],
         'score' => $score,
         'total' => $total_possible,
         'evaluations' => $evaluations
@@ -137,7 +140,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <form id="quizForm" method="POST">
             <?php foreach ($questions as $index => $q): ?>
                 <div class="q-card <?= $index === 0 ? 'active' : '' ?>" id="q-<?= $index ?>">
-                    <div style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 10px;">Question <?= $index + 1 ?> of <?= count($questions) ?></div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <div style="color: var(--text-muted); font-size: 0.9rem;">Question <?= $index + 1 ?> of <?= count($questions) ?></div>
+                        <div id="q-timer-<?= $index ?>" style="background: rgba(251, 113, 133, 0.1); color: var(--secondary); padding: 4px 12px; border-radius: 20px; font-weight: 700; font-size: 0.8rem;">60s</div>
+                    </div>
                     <h2 style="margin-bottom: 1.5rem; background: none; -webkit-text-fill-color: var(--text-main);"><?= htmlspecialchars($q['question_text']) ?></h2>
                     
                     <div class="options-container">
@@ -185,8 +191,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <script>
         let currentIdx = 0;
         const total = <?= count($questions) ?>;
-        
+        let qTimerInterval;
+        let qTimeLeft = 60; // 1 minute per question
+
+        function startQuestionTimer() {
+            clearInterval(qTimerInterval);
+            qTimeLeft = 60;
+            const timerDisplay = document.getElementById('q-timer-' + currentIdx);
+            
+            qTimerInterval = setInterval(() => {
+                qTimeLeft--;
+                if (timerDisplay) timerDisplay.innerText = qTimeLeft + 's';
+                
+                if (qTimeLeft <= 0) {
+                    clearInterval(qTimerInterval);
+                    handleTimeOut();
+                }
+            }, 1000);
+        }
+
+        function handleTimeOut() {
+            // Auto-advance as incorrect
+            const feedbackEl = document.getElementById('feedback-' + currentIdx);
+            feedbackEl.style.display = 'block';
+            feedbackEl.style.background = 'rgba(239, 68, 68, 0.15)';
+            feedbackEl.style.color = '#fca5a5';
+            feedbackEl.innerHTML = `<i class="fas fa-hourglass-end"></i> Time's Up! Moving to next...`;
+            
+            setTimeout(() => {
+                if (currentIdx < total - 1) {
+                    goTo(currentIdx + 1);
+                } else {
+                    document.getElementById('quizForm').submit();
+                }
+            }, 2000);
+        }
+
         function provideFeedback(idx, isCorrect, explanation) {
+            clearInterval(qTimerInterval); // Stop timer when answer is given
             const feedbackEl = document.getElementById('feedback-' + idx);
             feedbackEl.style.display = 'block';
             feedbackEl.style.background = isCorrect ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)';
@@ -194,7 +236,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             feedbackEl.innerHTML = `<i class="fas ${isCorrect ? 'fa-check-circle' : 'fa-times-circle'}"></i> ` + 
                                    (isCorrect ? 'Correct! ' : 'Incorrect. ') + (explanation || '');
             
-            // Auto advance only if correct
             if (isCorrect) {
                 setTimeout(() => {
                     if (idx < total - 1) {
@@ -215,6 +256,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             document.getElementById('q-' + n).classList.add('active');
             currentIdx = n;
             updateProgress();
+            startQuestionTimer(); // Restart timer for the new question
         }
 
         function updateProgress() {
@@ -222,26 +264,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         updateProgress();
+        startQuestionTimer(); // Initial call
 
-        // Timer Logic
-        let timeLeft = <?= ($quiz['time_limit'] > 0) ? ($quiz['time_limit'] * 60) : 0 ?>;
-        const timerDisplay = document.querySelector('#quiz-timer span');
+        // Global Timer Logic
+        let globalTimeLeft = <?= ($quiz['time_limit'] > 0) ? ($quiz['time_limit'] * 60) : 0 ?>;
+        const globalDisplay = document.querySelector('#quiz-timer span');
 
-        if (timeLeft > 0) {
+        if (globalTimeLeft > 0) {
             const timer = setInterval(() => {
-                let minutes = Math.floor(timeLeft / 60);
-                let seconds = timeLeft % 60;
-                timerDisplay.innerText = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+                let minutes = Math.floor(globalTimeLeft / 60);
+                let seconds = globalTimeLeft % 60;
+                globalDisplay.innerText = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
                 
-                if (timeLeft <= 0) {
+                if (globalTimeLeft <= 0) {
                     clearInterval(timer);
-                    alert("Time is up! Submitting automatically.");
+                    alert("Overall Time is up! Submitting automatically.");
                     document.getElementById('quizForm').submit();
                 }
-                timeLeft--;
+                globalTimeLeft--;
             }, 1000);
         } else {
-            timerDisplay.innerText = "No Limit";
+            globalDisplay.innerText = "No Limit";
         }
     </script>
 </body>

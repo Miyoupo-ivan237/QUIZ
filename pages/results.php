@@ -10,6 +10,14 @@ $result = $_SESSION['last_result'];
 $score_percent = ($result['total'] > 0) ? round(($result['score'] / $result['total']) * 100) : 0;
 $status = $score_percent >= 60 ? 'Passed' : 'Needs Improvement';
 $status_color = $score_percent >= 60 ? 'var(--success)' : 'var(--error)';
+
+// Level Progression Logic
+$next_quiz_id = null;
+if ($score_percent >= 60) {
+    $stmt = $pdo->prepare("SELECT id FROM quizzes WHERE branch = ? AND level > ? ORDER BY level ASC LIMIT 1");
+    $stmt->execute([$result['branch'], $result['level']]);
+    $next_quiz_id = $stmt->fetchColumn();
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -70,8 +78,8 @@ $status_color = $score_percent >= 60 ? 'var(--success)' : 'var(--error)';
         <div style="text-align: center; margin-top: 3rem; display: flex; justify-content: center; gap: 20px;">
             <button onclick="window.print()" class="btn btn-secondary" style="width: auto; padding: 14px 40px;"><i class="fas fa-print"></i> Print Scorecard</button>
             <?php if ($score_percent >= 60): ?>
-                <a href="dashboard.php" class="btn" style="width: auto; padding: 14px 40px; background: linear-gradient(135deg, #fbbf24, #d97706);">
-                    <i class="fas fa-unlock"></i> Unlock Next Challenge
+                <a href="<?= $next_quiz_id ? "quiz.php?id=$next_quiz_id" : "dashboard.php" ?>" class="btn" style="width: auto; padding: 14px 40px; background: linear-gradient(135deg, #fbbf24, #d97706);">
+                    <i class="fas fa-unlock"></i> <?= $next_quiz_id ? "Go to Level " . ($result['level']+1) : "All Levels Completed" ?>
                 </a>
             <?php endif; ?>
         </div>

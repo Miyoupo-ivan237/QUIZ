@@ -35,9 +35,13 @@ try {
         total_questions INTEGER DEFAULT 0,
         time_limit INTEGER DEFAULT 0, 
         author_id INTEGER,
+        level INTEGER DEFAULT 1, -- Level indicator for progression
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (author_id) REFERENCES users(id)
     )");
+
+    // Gracefully add level column if not exists
+    try { $pdo->exec("ALTER TABLE quizzes ADD COLUMN level INTEGER DEFAULT 1"); } catch(PDOException $e) {}
 
     // Questions Table
     $pdo->exec("CREATE TABLE IF NOT EXISTS questions (
