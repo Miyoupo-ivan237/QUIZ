@@ -19,7 +19,7 @@ $stmt->execute([$teacher_id]);
 $total_participants = $stmt->fetchColumn();
 
 // Avg Score
-$stmt = $pdo->prepare("SELECT AVG(CAST(score AS FLOAT) / total_points * 100) FROM attempts a JOIN quizzes q ON a.quiz_id = q.id WHERE q.author_id = ?");
+$stmt = $pdo->prepare("SELECT AVG(CASE WHEN total_points > 0 THEN CAST(score AS FLOAT) / total_points * 100 ELSE 0 END) FROM attempts a JOIN quizzes q ON a.quiz_id = q.id WHERE q.author_id = ?");
 $stmt->execute([$teacher_id]);
 $avg_score = round($stmt->fetchColumn());
 

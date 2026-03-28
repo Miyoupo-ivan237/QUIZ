@@ -42,7 +42,10 @@ $stmt->execute([$user_id]);
 $attempts = $stmt->fetchAll();
 
 // Performance Per Quiz (Grouped)
-$stmt = $pdo->prepare("SELECT q.title, AVG(a.score*100.0/a.total_points) as avg_score, MAX(a.score*100.0/a.total_points) as max_score, COUNT(*) as attempt_count
+$stmt = $pdo->prepare("SELECT q.title, 
+                            AVG(CASE WHEN a.total_points > 0 THEN a.score*100.0/a.total_points ELSE 0 END) as avg_score, 
+                            MAX(CASE WHEN a.total_points > 0 THEN a.score*100.0/a.total_points ELSE 0 END) as max_score, 
+                            COUNT(*) as attempt_count
                         FROM attempts a 
                         JOIN quizzes q ON a.quiz_id = q.id 
                         WHERE a.user_id = ? 
@@ -122,7 +125,7 @@ $performance = $stmt->fetchAll();
                         <tr><td colspan="5" style="text-align: center; padding: 50px; color: var(--text-muted);">No attempts recorded.</td></tr>
                     <?php else: ?>
                         <?php foreach($attempts as $att): 
-                            $pct = round(($att['score'] / $att['total_points']) * 100);
+                            $pct = ($att['total_points'] > 0) ? round(($att['score'] / $att['total_points']) * 100) : 0;
                         ?>
                             <tr>
                                 <td>

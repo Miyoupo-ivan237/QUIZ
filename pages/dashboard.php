@@ -56,7 +56,7 @@ $quizzes = $stmt->fetchAll();
 $student_stats = [];
 $missed_count = 0;
 if ($role === 'student') {
-    $stmt = $pdo->prepare("SELECT COUNT(*) as total, AVG(score*100.0/total_points) as avg_score FROM attempts WHERE user_id = ?");
+    $stmt = $pdo->prepare("SELECT COUNT(*) as total, AVG(CASE WHEN total_points > 0 THEN score*100.0/total_points ELSE 0 END) as avg_score FROM attempts WHERE user_id = ?");
     $stmt->execute([$user_id]);
     $student_stats = $stmt->fetch();
     
