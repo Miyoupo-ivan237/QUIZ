@@ -48,13 +48,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $total_possible += $points;
         $is_correct = false;
         $provided = $user_answers[$q_id] ?? '';
+        $provided_answer_text = $provided;
 
         if ($type === 'multiple_choice' || $type === 'true_false') {
             $selected_opt_id = intval($provided);
             $opts = $all_options[$q_id] ?? [];
             foreach ($opts as $opt) {
-                if ($opt['is_correct'] && $opt['id'] == $selected_opt_id) {
-                    $is_correct = true;
+                if ($opt['id'] == $selected_opt_id) {
+                    $provided_answer_text = $opt['option_text'];
+                    if ($opt['is_correct']) {
+                        $is_correct = true;
+                    }
                     break;
                 }
             }
@@ -63,6 +67,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $input = trim(strtolower($provided));
             if ($correct === $input) {
                 $is_correct = true;
+            }
+        }
+
+        $correct_answer_text = $q['correct_answer'] ?? '';
+        if ($type === 'multiple_choice' || $type === 'true_false') {
+            $opts = $all_options[$q_id] ?? [];
+            foreach ($opts as $opt) {
+                if ($opt['is_correct']) {
+                    $correct_answer_text = $opt['option_text'];
+                    break;
+                }
             }
         }
 
@@ -75,7 +90,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'status' => $is_correct ? 'Correct' : 'Incorrect',
             'points' => $is_correct ? $points : 0,
             'explanation' => $q['explanation'],
-            'correct_answer' => $q['correct_answer'] ?? '' // For MCQ we might want text, but let's stick to this for now
+            'correct_answer' => $correct_answer_text,
+            'provided_answer' => $provided_answer_text
         ];
     }
 

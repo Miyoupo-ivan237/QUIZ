@@ -59,11 +59,24 @@ if ($score_percent >= 60) {
                         <span class="eval-status status-<?= $eval['status'] ?>"><?= $eval['status'] ?></span>
                     </div>
                     
-                    <div style="font-size: 0.9rem; color: var(--text-muted);">Points earned: <?= $eval['points'] ?></div>
+                    <div style="font-size: 0.9rem; margin-bottom: 10px;">
+                        <span style="color: var(--text-muted);">Points earned:</span> <strong style="color: var(--primary);"><?= $eval['points'] ?></strong>
+                    </div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 8px; width: 100%; margin-bottom: 15px;">
+                        <div style="font-size: 0.85rem; padding: 8px 12px; background: rgba(255,255,255,0.03); border-radius: 8px;">
+                            <span style="opacity: 0.6;">Your Answer:</span> <strong><?= htmlspecialchars($eval['provided_answer']) ?></strong>
+                        </div>
+                        <?php if ($eval['status'] === 'Incorrect'): ?>
+                            <div style="font-size: 0.85rem; padding: 8px 12px; background: rgba(16, 185, 129, 0.1); border-radius: 8px; color: var(--success); border-left: 3px solid var(--success);">
+                                <span style="opacity: 0.8;">Correct Answer:</span> <strong><?= htmlspecialchars($eval['correct_answer']) ?></strong>
+                            </div>
+                        <?php endif; ?>
+                    </div>
                     
                     <?php if ($eval['status'] === 'Incorrect'): ?>
                         <div style="background: rgba(255, 255, 255, 0.03); border-left: 4px solid var(--secondary); padding: 15px; border-radius: 0 12px 12px 0; width: 100%;">
-                            <p style="margin: 0; font-weight: 600; color: var(--secondary);"><i class="fas fa-lightbulb"></i> Correction:</p>
+                            <p style="margin: 0; font-weight: 600; color: var(--secondary);"><i class="fas fa-lightbulb"></i> Explanation:</p>
                             <p style="margin: 5px 0;"><?= htmlspecialchars($eval['explanation']) ?></p>
                         </div>
                     <?php else: ?>
